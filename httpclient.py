@@ -41,13 +41,25 @@ class HTTPClient(object):
         return None
 
     def get_code(self, data):
-        return None
+    
+        print("this is data\n",data)
+        try:
+            header1 = data.split("\r\n")[0]
+            code = header1.split()[1]
+            return int(code)
+        except:
+            return 404
 
+      
     def get_headers(self,data):
-        return None
+        h = data.spilt("/r/n/r")
+        
+        return  h[0]
 
     def get_body(self, data):
-        return None
+        h = data.split("\r\n\r\n")
+        
+        return h[1]
     
     def sendall(self, data):
         self.socket.sendall(data.encode('utf-8'))
@@ -70,11 +82,71 @@ class HTTPClient(object):
     def GET(self, url, args=None):
         code = 500
         body = ""
+        url1 = urllib.parse.urlparse(url)
+        scheme = url1.scheme
+        port = url1.port
+        if port == None:
+            if scheme == "http":
+                port = 80
+            if scheme == "https":
+                port = 443
+        
+        path = url1.path
+        if path =="":
+            path = '/'
+        end = "\r\n"
+        request = "GET "+path+" HTTP/1.1"+ end+\
+            "Host: "+ url1.hostname +end + \
+                "Accept: */*\r\n" + \
+                    "Connection: close\r\n\r\n"
+
+        self.connect(url1.hostname, port)
+        self.sendall(request)
+        response = self.recvall(self.socket)
+        self.close()
+        code = self.get_code(response)
+        body = self.get_body(response)
+
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):
         code = 500
         body = ""
+        url1 = urllib.parse.urlparse(url)
+        scheme = url1.scheme
+        port = url1.port
+        if port == "":
+            if scheme == "http":
+                port = 80
+            if scheme == "https":
+                port = 443
+
+        
+        path = url1.path
+        if path =="":
+            path = "/"
+        end = "\r\n"  
+
+        if args == None:
+            body = ""
+        else:
+            body = urllib.parse.urlencode(args)
+
+        request = "POST " + path + " HTTP/1.1" +end +\
+            "HOST: "+  url1.hostname+end  +\
+            "Content-Type: application/x-www-form-urlencoded" + end \
+            + "Content-Length: " + str(len(body)) + end +\
+            "Accept: */*\r\naccept-charset:utf-8\r\nConnection: close\r\n\r\n" \
+            + body
+
+        print("this is request", request)
+        self.connect(url1.hostname, port)
+        self.sendall(request)
+        response = self.recvall(self.socket)
+        self.close()
+        code = self.get_code(response)
+        body = self.get_body(response)
+
         return HTTPResponse(code, body)
 
     def command(self, url, command="GET", args=None):
